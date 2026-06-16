@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}STT Control Plane{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    :root {
+      --bg: #0f1115; --card: #181b22; --line: #2a2f3a;
+      --fg: #e8eaed; --muted: #9aa3b2; --accent: #6ea8fe; --danger: #ff7b7b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    a { color: var(--accent); }
+    .topbar {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 24px;
+    }
+    .panel {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 10px; padding: 18px 20px; margin-bottom: 16px;
+    }
+    .panel.disabled { opacity: .5; }
+    button {
+      font: inherit; cursor: pointer; border: 1px solid var(--line);
+      background: #222633; color: var(--fg); padding: 8px 14px;
+      border-radius: 7px; margin: 6px 8px 0 0;
+    }
+    button.primary { background: var(--accent); color: #0b1020; border-color: var(--accent); }
+    button.danger  { color: var(--danger); border-color: #4a2b2b; }
+    button:disabled { cursor: not-allowed; }
+    .btn-link {
+      display: inline-block; text-decoration: none; background: var(--accent);
+      color: #0b1020; padding: 10px 16px; border-radius: 7px; font-weight: 600;
+    }
+    code { background: #0b0d12; padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+    code.key {
+      display: block; word-break: break-all; padding: 10px 12px;
+      margin: 8px 0; font-size: 13px;
+    }
+    .alert {
+      background: #1d2a1d; border: 1px solid #2f5130; border-radius: 8px;
+      padding: 12px 14px; margin-bottom: 10px;
+    }
+    .alert.error { background: #2a1d1d; border-color: #5a2b2b; }
+  </style>
+</head>
+<body>
+  <main class="wrap">{% block content %}{% endblock %}</main>
+</body>
+</html>

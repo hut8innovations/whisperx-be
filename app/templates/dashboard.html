@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · STT Control Plane{% endblock %}
+{% block content %}
+  <div class="topbar">
+    <h1>Dashboard</h1>
+    <span class="muted">{{ user.email }} · <a href="/logout">Sign out</a></span>
+  </div>
+
+  {% include "_api_key_panel.html" %}
+
+  <!-- Later slices: structure shown, intentionally not built yet. -->
+  <div class="panel disabled"><h2>STT playground</h2>
+    <p class="muted">Slice 4 — needs the live transcribe endpoint.</p></div>
+  <div class="panel disabled"><h2>Usage</h2>
+    <p class="muted">Slice 5 — reads over usage_events.</p></div>
+  <div class="panel disabled"><h2>Billing</h2>
+    <p class="muted">Slice 6 — Razorpay subscription.</p></div>
+  <div class="panel disabled"><h2>Analytics</h2>
+    <p class="muted">Slice 5 — usage-over-time.</p></div>
+{% endblock %}

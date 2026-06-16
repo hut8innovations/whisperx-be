@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: stt-control-plane
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_BASE_URL
+        sync: false           # set to https://<service>.onrender.com after first deploy
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DEFAULT_COHORT_TAG
+        value: pilot
+      - key: RUNPOD_ENDPOINT_ID
+        sync: false
+      - key: RUNPOD_API_KEY
+        sync: false
+      - key: MODEL_VERSION
+        value: whisperx-large-v3-baseline
+      - key: MONTHLY_QUOTA_SECONDS
+        value: "36000"

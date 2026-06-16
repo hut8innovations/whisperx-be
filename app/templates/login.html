@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sign in · STT Control Plane{% endblock %}
+{% block content %}
+  <h1>STT Control Plane</h1>
+  <p class="muted">Speaker-attributed transcription — private pilot.</p>
+
+  {% if error %}
+    <div class="alert error">{{ error }}</div>
+  {% endif %}
+
+  <div class="panel" style="margin-top: 24px;">
+    <h2>Sign in</h2>
+    <p class="muted">Access is invite-only during the pilot.</p>
+    <a class="btn-link" href="/login">Continue with Google</a>
+  </div>
+{% endblock %}

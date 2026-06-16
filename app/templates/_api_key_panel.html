@@ -1,0 +1,31 @@
+<section id="key-panel" class="panel">
+  <h2>API key</h2>
+
+  {% if plaintext %}
+    {# Just issued — the only moment the full key is ever shown. #}
+    <div class="alert">
+      <strong>Copy this key now — it is shown only once.</strong>
+      <code class="key">{{ plaintext }}</code>
+    </div>
+    <p class="muted">Prefix <code>{{ key.prefix }}</code> · status {{ key.status }}</p>
+    <button class="primary" hx-post="/keys/rotate" hx-target="#key-panel"
+            hx-swap="outerHTML" hx-confirm="Rotate? The current key stops working.">Rotate</button>
+    <button class="danger" hx-post="/keys/revoke" hx-target="#key-panel"
+            hx-swap="outerHTML" hx-confirm="Revoke this key?">Revoke</button>
+
+  {% elif key %}
+    {# Existing active key — plaintext is gone, prefix only. #}
+    <p>Active key <code>{{ key.prefix }}…</code> · status <strong>{{ key.status }}</strong></p>
+    <p class="muted">The full key is shown only at creation. Rotate to get a new one.</p>
+    <button class="primary" hx-post="/keys/rotate" hx-target="#key-panel"
+            hx-swap="outerHTML" hx-confirm="Rotate? The current key stops working.">Rotate</button>
+    <button class="danger" hx-post="/keys/revoke" hx-target="#key-panel"
+            hx-swap="outerHTML" hx-confirm="Revoke this key?">Revoke</button>
+
+  {% else %}
+    {# No active key. #}
+    <p class="muted">No active API key.</p>
+    <button class="primary" hx-post="/keys" hx-target="#key-panel"
+            hx-swap="outerHTML">Generate API key</button>
+  {% endif %}
+</section>
