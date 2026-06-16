@@ -1,0 +1,21 @@
+{% if error %}
+  <div class="alert error">{{ error }}</div>
+{% elif result %}
+  <div class="result">
+    <p class="muted">
+      {{ result.detected_language or "?" }} ·
+      {{ "%.1f"|format(result.audio_seconds) }}s audio ·
+      {{ "%.1f"|format(latency) }}s to transcribe ·
+      {{ model_version }}
+    </p>
+    <div class="transcript">
+      {% for seg in result.segments %}
+        <p><span class="spk">{{ seg.speaker or "—" }}</span>{{ seg.text }}</p>
+      {% endfor %}
+    </div>
+    <details>
+      <summary class="muted">Full transcript</summary>
+      <p>{{ result.full_transcript }}</p>
+    </details>
+  </div>
+{% endif %}

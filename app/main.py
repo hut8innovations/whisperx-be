@@ -6,14 +6,15 @@ Slices in this codebase:
   Slice 1 : Google OAuth via Supabase Auth + route protection
   Slice 2 : hashed API-key issue / rotate / revoke (shown once)
   Slice 3 : public POST /v1/transcribe (API-key auth -> RunPod -> usage_event)
+  Slice 4 : dashboard playground (session auth, file upload -> same core)
 
-Deliberately NOT here: playground UI (4), usage/analytics panels (5),
-Razorpay (6). Built against this same codebase in later sessions.
+Deliberately NOT here: usage/analytics panels (5), Razorpay (6).
+Built against this same codebase in later sessions.
 """
 
 import time
 
-from fastapi import FastAPI, Header, Request
+from fastapi import FastAPI, File, Form, Header, Request, UploadFile
 from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
@@ -24,7 +25,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import auth, db, runpod_client
+from . import auth, db, runpod_client, storage
 from .config import settings
 from .security import generate_api_key, hash_key
 
@@ -147,7 +148,12 @@ def dashboard(request: Request):
     return templates.TemplateResponse(
         request,
         "dashboard.html",
-        {"user": user, "key": key, "plaintext": None},
+        {
+            "user": user,
+            "key": key,
+            "plaintext": None,
+            "max_upload_mb": settings.max_upload_mb,
+        },
     )
 
 
@@ -190,6 +196,48 @@ def revoke_key(request: Request):
     return _render_key_panel(request, None, None)
 
 
+# --- Slice 3/4: shared transcription core --------------------------------
+class QuotaExceeded(Exception):
+    def __init__(self, used: float, quota: int):
+        self.used, self.quota = used, quota
+
+
+class ModelNotConfigured(Exception):
+    pass
+
+
+def run_transcription(
+    user_id: str,
+    cohort_tag: str | None,
+    audio_url: str,
+    min_speakers: int | None = None,
+    max_speakers: int | None = None,
+) -> dict:
+    """The one path that meters and transcribes. Both the public API and the
+    playground call this — same quota check, same RunPod call, same usage_event.
+    """
+    if db.used_seconds_this_period(user_id) >= settings.monthly_quota_seconds:
+        raise QuotaExceeded(
+            db.used_seconds_this_period(user_id), settings.monthly_quota_seconds
+        )
+    if not settings.runpod_endpoint_id or not settings.runpod_api_key:
+        raise ModelNotConfigured()
+
+    output = runpod_client.transcribe(audio_url, min_speakers, max_speakers)
+    shaped = runpod_client.shape(output)
+    db.insert_usage_event(
+        user_id, shaped["audio_seconds"], settings.model_version, cohort_tag
+    )
+    return shaped
+
+
+def _opt_int(v) -> int | None:
+    try:
+        return int(v) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
 # --- Slice 3: public API (API-key auth, NOT cookie session) ------------------
 class TranscribeRequest(BaseModel):
     audio_url: str
@@ -212,41 +260,27 @@ def transcribe(body: TranscribeRequest, authorization: str | None = Header(defau
     owner = _api_key_owner(authorization)
     if not owner:
         return JSONResponse({"error": "invalid_api_key"}, status_code=401)
-
-    # Soft quota: reject only if already over the cycle cap. We can't know the
-    # new file's duration until after transcription, so we don't pre-charge it.
-    used = db.used_seconds_this_period(owner["user_id"])
-    if used >= settings.monthly_quota_seconds:
+    try:
+        shaped = run_transcription(
+            owner["user_id"],
+            owner.get("cohort_tag"),
+            body.audio_url,
+            body.min_speakers,
+            body.max_speakers,
+        )
+    except QuotaExceeded as exc:
         return JSONResponse(
-            {
-                "error": "quota_exceeded",
-                "used_seconds": used,
-                "quota_seconds": settings.monthly_quota_seconds,
-            },
+            {"error": "quota_exceeded", "used_seconds": exc.used, "quota_seconds": exc.quota},
             status_code=402,
         )
-
-    if not settings.runpod_endpoint_id or not settings.runpod_api_key:
+    except ModelNotConfigured:
         return JSONResponse({"error": "model_endpoint_not_configured"}, status_code=503)
-
-    try:
-        output = runpod_client.transcribe(
-            body.audio_url, body.min_speakers, body.max_speakers
-        )
     except runpod_client.RunPodTimeout:
         return JSONResponse({"error": "transcription_timeout"}, status_code=504)
     except runpod_client.RunPodError as exc:
         return JSONResponse(
             {"error": "transcription_failed", "detail": str(exc)}, status_code=502
         )
-
-    shaped = runpod_client.shape(output)
-    db.insert_usage_event(
-        owner["user_id"],
-        shaped["audio_seconds"],
-        settings.model_version,
-        owner.get("cohort_tag"),
-    )
     return {
         "model_version": settings.model_version,
         "detected_language": shaped["detected_language"],
@@ -254,6 +288,67 @@ def transcribe(body: TranscribeRequest, authorization: str | None = Header(defau
         "full_transcript": shaped["full_transcript"],
         "segments": shaped["segments"],
     }
+
+
+# --- Slice 4: playground (session auth, file upload -> shared core) ----------
+def _playground_result(request: Request, *, result=None, error=None, latency=None):
+    return templates.TemplateResponse(
+        request,
+        "_playground_result.html",
+        {
+            "result": result,
+            "error": error,
+            "latency": latency,
+            "model_version": settings.model_version,
+        },
+    )
+
+
+@app.post("/app/playground", response_class=HTMLResponse)
+def playground(
+    request: Request,
+    file: UploadFile = File(...),
+    min_speakers: str | None = Form(default=None),
+    max_speakers: str | None = Form(default=None),
+):
+    user = current_user(request)
+    if not user:
+        return _unauthorized(request)
+
+    data = file.file.read()
+    if not data:
+        return _playground_result(request, error="That file looks empty.")
+    if len(data) > settings.max_upload_mb * 1024 * 1024:
+        return _playground_result(
+            request, error=f"File exceeds the {settings.max_upload_mb} MB pilot limit."
+        )
+
+    try:
+        audio_url = storage.upload_and_sign(
+            user["id"], file.filename, data, file.content_type
+        )
+    except Exception as exc:  # storage/bucket misconfig surfaces here
+        return _playground_result(request, error=f"Upload failed: {exc}")
+
+    started = time.time()
+    try:
+        shaped = run_transcription(
+            user["id"], None, audio_url, _opt_int(min_speakers), _opt_int(max_speakers)
+        )
+    except QuotaExceeded as exc:
+        return _playground_result(
+            request, error=f"Quota reached ({exc.used:.0f}/{exc.quota}s this cycle)."
+        )
+    except ModelNotConfigured:
+        return _playground_result(request, error="Model endpoint not configured.")
+    except runpod_client.RunPodTimeout:
+        return _playground_result(
+            request, error="Timed out — try a shorter clip (long files need the async path)."
+        )
+    except runpod_client.RunPodError as exc:
+        return _playground_result(request, error=f"Transcription failed: {exc}")
+
+    return _playground_result(request, result=shaped, latency=time.time() - started)
 
 
 @app.get("/healthz")

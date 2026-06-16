@@ -51,6 +51,23 @@
       padding: 12px 14px; margin-bottom: 10px;
     }
     .alert.error { background: #2a1d1d; border-color: #5a2b2b; }
+
+    /* Slice 4 — playground */
+    .row { display: flex; gap: 16px; margin: 10px 0; }
+    .row label { font-size: 13px; color: var(--muted); }
+    .row input { width: 64px; margin-left: 6px; background: #0b0d12;
+      color: var(--fg); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; }
+    input[type=file] { color: var(--muted); font-size: 13px; }
+    .htmx-indicator { opacity: 0; transition: opacity .2s; }
+    .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+    .result { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .transcript p { margin: 6px 0; }
+    .transcript .spk {
+      display: inline-block; min-width: 92px; margin-right: 10px; color: var(--accent);
+      font-size: 12px; font-weight: 600; vertical-align: top;
+    }
+    details { margin-top: 10px; }
+    details summary { cursor: pointer; }
   </style>
 </head>
 <body>

@@ -23,5 +23,10 @@ class Settings(BaseSettings):
     runpod_poll_timeout_s: int = 300
     runpod_poll_interval_s: float = 2.5
 
+    # --- Slice 4: playground (file upload -> Supabase Storage -> signed URL) ---
+    playground_bucket: str = "playground-audio"  # create this private bucket in Supabase
+    signed_url_ttl_s: int = 3600                 # RunPod must fetch within this window
+    max_upload_mb: int = 25                      # keep short for the synchronous path
+
 
 settings = Settings()

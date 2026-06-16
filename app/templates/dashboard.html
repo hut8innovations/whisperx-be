@@ -8,9 +8,25 @@
 
   {% include "_api_key_panel.html" %}
 
+  <section class="panel" id="playground">
+    <h2>STT playground</h2>
+    <p class="muted">Upload interview audio (≤ {{ max_upload_mb }} MB) → speaker-attributed
+      transcript. Runs the real path, so it counts against your quota.</p>
+    <form hx-post="/app/playground" hx-target="#playground-result" hx-swap="innerHTML"
+          hx-encoding="multipart/form-data" hx-indicator="#pg-spin"
+          hx-on::after-request="if(event.detail.successful) this.reset()">
+      <input type="file" name="file" accept="audio/*" required>
+      <div class="row">
+        <label>Min speakers <input type="number" name="min_speakers" min="1" max="10"></label>
+        <label>Max speakers <input type="number" name="max_speakers" min="1" max="10"></label>
+      </div>
+      <button class="primary" type="submit">Transcribe</button>
+      <span id="pg-spin" class="htmx-indicator muted">Transcribing… first run wakes the GPU (up to ~1 min).</span>
+    </form>
+    <div id="playground-result"></div>
+  </section>
+
   <!-- Later slices: structure shown, intentionally not built yet. -->
-  <div class="panel disabled"><h2>STT playground</h2>
-    <p class="muted">Slice 4 — needs the live transcribe endpoint.</p></div>
   <div class="panel disabled"><h2>Usage</h2>
     <p class="muted">Slice 5 — reads over usage_events.</p></div>
   <div class="panel disabled"><h2>Billing</h2>

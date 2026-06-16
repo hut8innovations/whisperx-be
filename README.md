@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# whisperx-be
-API framework to expose the model to runpod
-=======
 # STT Control Plane — Slices 1–2 (Auth + API Key)
 
 FastAPI + HTMX control plane for the STT product. One server-rendered codebase.
@@ -80,4 +76,3 @@ look it up by `key_hash`.
 Slice 3 (`/v1/transcribe`) needs the live RunPod Slice 0 endpoint returning
 speaker-attributed JSON. Do not build slices 3–6, a mock transcribe path, the
 playground, analytics, or Razorpay in this codebase yet.
->>>>>>> cb284dd (STT control plane: slices 1-3)
